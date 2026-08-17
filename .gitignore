@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# transfer scratch + retired starter files (safe to delete)
+_to_delete/

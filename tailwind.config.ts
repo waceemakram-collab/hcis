@@ -10,6 +10,18 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        // Browsers resolve font stacks per glyph: Latin characters come from
+        // Geist, Arabic characters fall through to Noto Sans Arabic. One stack
+        // serves both locales — no direction-specific CSS needed.
+        sans: [
+          "var(--font-geist-sans)",
+          "var(--font-noto-arabic)",
+          "ui-sans-serif",
+          "system-ui",
+          "sans-serif",
+        ],
+      },
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",

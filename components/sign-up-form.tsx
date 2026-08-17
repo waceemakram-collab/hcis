@@ -1,7 +1,9 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,46 +14,57 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useI18n } from "@/lib/i18n/provider";
+import { AFTER_LOGIN_PATH } from "@/lib/routes";
+import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
+
+const MIN_PASSWORD_LENGTH = 8;
 
 export function SignUpForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
+  const { dict } = useI18n();
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    const supabase = createClient();
-    setIsLoading(true);
     setError(null);
 
     if (password !== repeatPassword) {
-      setError("Passwords do not match");
-      setIsLoading(false);
+      setError(dict.auth.passwordsDoNotMatch);
+      return;
+    }
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(dict.auth.passwordTooShort);
       return;
     }
 
+    setIsLoading(true);
+
     try {
+      const supabase = createClient();
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/protected`,
+          // Where the confirmation link lands once the address is verified.
+          emailRedirectTo: `${window.location.origin}${AFTER_LOGIN_PATH}`,
         },
       });
       if (error) throw error;
+
       router.push("/auth/sign-up-success");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
-    } finally {
+      // Supabase returns these messages in English only.
+      setError(error instanceof Error ? error.message : dict.errors.generic);
       setIsLoading(false);
     }
   };
@@ -60,56 +73,69 @@ export function SignUpForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Sign up</CardTitle>
-          <CardDescription>Create a new account</CardDescription>
+          <CardTitle className="text-2xl">{dict.auth.signUpTitle}</CardTitle>
+          <CardDescription>{dict.auth.signUpSubtitle}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignUp}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{dict.auth.email}</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="m@example.com"
+                  autoComplete="email"
+                  dir="ltr"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
+
               <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                </div>
+                <Label htmlFor="password">{dict.auth.password}</Label>
                 <Input
                   id="password"
                   type="password"
+                  autoComplete="new-password"
+                  dir="ltr"
                   required
+                  minLength={MIN_PASSWORD_LENGTH}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
+
               <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="repeat-password">Repeat Password</Label>
-                </div>
+                <Label htmlFor="repeat-password">
+                  {dict.auth.repeatPassword}
+                </Label>
                 <Input
                   id="repeat-password"
                   type="password"
+                  autoComplete="new-password"
+                  dir="ltr"
                   required
                   value={repeatPassword}
                   onChange={(e) => setRepeatPassword(e.target.value)}
                 />
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
+
+              {error && (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              )}
+
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating an account..." : "Sign up"}
+                {isLoading ? dict.auth.creatingAccount : dict.auth.signUp}
               </Button>
             </div>
+
             <div className="mt-4 text-center text-sm">
-              Already have an account?{" "}
+              {dict.auth.haveAccount}{" "}
               <Link href="/auth/login" className="underline underline-offset-4">
-                Login
+                {dict.auth.signIn}
               </Link>
             </div>
           </form>

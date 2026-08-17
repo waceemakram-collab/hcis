@@ -1,29 +1,33 @@
 import Link from "next/link";
-import { Button } from "./ui/button";
+
+import { LogoutButton } from "@/components/logout-button";
+import { Button } from "@/components/ui/button";
+import { getI18n } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
-import { LogoutButton } from "./logout-button";
 
 export async function AuthButton() {
+  const { dict } = await getI18n();
   const supabase = await createClient();
 
-  // You can also use getUser() which will be slower.
   const { data } = await supabase.auth.getClaims();
-
   const user = data?.claims;
 
-  return user ? (
-    <div className="flex items-center gap-4">
-      Hey, {user.email}!
+  if (!user) {
+    return (
+      <div className="flex gap-2">
+        <Button asChild size="sm" variant="outline">
+          <Link href="/auth/login">{dict.auth.signIn}</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <span className="hidden text-sm text-muted-foreground sm:inline" dir="ltr">
+        {typeof user.email === "string" ? user.email : ""}
+      </span>
       <LogoutButton />
-    </div>
-  ) : (
-    <div className="flex gap-2">
-      <Button asChild size="sm" variant={"outline"}>
-        <Link href="/auth/login">Sign in</Link>
-      </Button>
-      <Button asChild size="sm" variant={"default"}>
-        <Link href="/auth/sign-up">Sign up</Link>
-      </Button>
     </div>
   );
 }
