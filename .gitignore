@@ -43,3 +43,7 @@ next-env.d.ts
 
 # transfer scratch + retired starter files (safe to delete)
 _to_delete/
+
+# FUSE mount artifacts — stale copies left behind when a file is rewritten
+# while another process (dev server, editor) still has it open.
+.fuse_hidden*
