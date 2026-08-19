@@ -48,6 +48,42 @@ function describeMalformedConfig(rawUrl: string, rawKey: string): string | null 
     return `NEXT_PUBLIC_SUPABASE_URL should start with https:// — got ${parsed.protocol}//`;
   }
 
+  // The other way this goes wrong: pasting the *dashboard* URL
+  // (https://supabase.com/dashboard/project/<ref>) instead of the API URL.
+  // Both are valid https URLs; only one is an API endpoint.
+  if (parsed.hostname === "supabase.com" || parsed.hostname.endsWith(".supabase.com")) {
+    return `NEXT_PUBLIC_SUPABASE_URL is set to a supabase.com address (${rawUrl}). That is the dashboard, not the API. The value you want looks like https://<project-ref>.supabase.co — find it under Project Settings → API.`;
+  }
+
+  if (parsed.pathname !== "/" && parsed.pathname !== "") {
+    return `NEXT_PUBLIC_SUPABASE_URL should be a bare origin with no path, but it has one: "${parsed.pathname}". Use https://<project-ref>.supabase.co and nothing after it.`;
+  }
+
+  // A Supabase project ref is the leading label of the hostname, and it is a
+  // run of lowercase letters and digits — never hyphens, never uppercase.
+  //
+  // This check exists because of a real production incident: the deployment
+  // guide's placeholder, "https://your-prod-ref.supabase.co", was pasted into
+  // Vercel verbatim. It is a syntactically perfect https URL, so everything
+  // below waved it through, and the only symptom the browser gave was a bare
+  // "Failed to fetch" from inside supabase-js — no hint that the hostname
+  // simply did not exist.
+  //
+  // The length floor is deliberately loose (refs are longer than this) rather
+  // than pinned to an exact count: the point is to reject placeholders and
+  // truncation, not to encode a number Supabase never promised.
+  if (parsed.hostname.endsWith(".supabase.co")) {
+    const ref = parsed.hostname.split(".")[0];
+
+    if (!/^[a-z0-9]+$/.test(ref)) {
+      return `NEXT_PUBLIC_SUPABASE_URL points at "${ref}.supabase.co", but a Supabase project ref contains only lowercase letters and digits. This looks like a placeholder or a hand-typed value, not a real project URL. Copy it from Project Settings → API in the Supabase dashboard.`;
+    }
+
+    if (ref.length < 15) {
+      return `NEXT_PUBLIC_SUPABASE_URL points at "${ref}.supabase.co", but that project ref is too short (${ref.length} characters) to be real — the value is probably truncated. Re-copy it from Project Settings → API.`;
+    }
+  }
+
   // Legacy anon keys are JWTs; the newer publishable keys (sb_publishable_…)
   // are not, so only JWT-shaped values get the structural check.
   if (rawKey.startsWith("eyJ")) {
